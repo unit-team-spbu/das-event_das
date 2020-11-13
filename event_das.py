@@ -13,6 +13,7 @@ class EventsDAS:
     name = "event_das"
     db = MongoDatabase()
     eta = RpcProxy("event_theme_analyzer")
+    logger_rpc = RpcProxy('logger')
     dispatch = EventDispatcher()
 
     # Logic
@@ -53,6 +54,8 @@ class EventsDAS:
         Returns:
             list: stringed ObjectIds for saved events
         """
+        self.logger_rpc.log(self.name, self._process_events_save.__name__, events, "Info", "Starting saving processing")
+
         collection = self.db["events"]
 
         new_events = []
@@ -94,16 +97,18 @@ class EventsDAS:
             else:
                 new_events.append(event)
 
-        # TODO: send to Theme Analyzer and save analyzed event
-        # ! BLOCKED: no Event Theme Analyzer service present currently
-
-        new_events = self.eta.analyze_events(new_events)
+        self.logger_rpc.log(self.name, self._process_events_save.__name__, events, "Info", "Analyzing new events")
+        try:
+            new_events = self.eta.analyze_events(new_events)
+        except:
+            self.logger_rpc.log(self.name, self._process_events_save.__name__, events, "Error", "Can't analyze new events")
 
         if len(new_events) > 0:
             collection.insert_many(new_events)
             self.dispatch("new_events", "")
         elif is_new_info:
             self.dispatch("new_events", "")
+        self.logger_rpc.log(self.name, self._process_events_save.__name__, events, "Info", "New events saved")
 
         ids = self._find_expired()
         if len(ids) > 0:
@@ -111,6 +116,8 @@ class EventsDAS:
 
             for id in ids:
                 self._delete_event_by_id(id)
+        self.logger_rpc.log(self.name, self._process_events_save.__name__, events, "Info", "Old events removed")
+        
 
     def _get_event_by_id(self, id):
         return self.db["events"].find_one({"_id": ObjectId(id)})
@@ -186,6 +193,7 @@ class EventsDAS:
             events.append(row)
 
         # Sorting by date
+        self.logger_rpc.log(self.name, self.get_events_by_date.__name__, None, "Info", "Getting all events by date")
         return sorted(events, key=lambda event: self._date_key(event['startDate']))
 
     @rpc
@@ -197,6 +205,7 @@ class EventsDAS:
 
         Returns:
             tags (list): list of event tags"""
+        self.logger_rpc.log(self.name, self.get_tags_by_id.__name__, event_id, "Info", "Getting tags by event_id")
 
         return self._get_event_by_id(event_id)['tags']
 
@@ -213,6 +222,7 @@ class EventsDAS:
         cursor = self.db['events'].find()
         for event in cursor:
             events[str(event["_id"])] = event["tags"]
+        self.logger_rpc.log(self.name, self.get_event_tags.__name__, None, "Info", "Getting all event ids with tags")
         return events
 
     @http('GET', '/events/<string:id>/tags')
