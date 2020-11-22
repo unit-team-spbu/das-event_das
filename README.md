@@ -1,4 +1,4 @@
-# IT-Events Crawler
+# Хранилище мероприятий
 
 Данный документ содержит описание работы и информацию о развертке микросервиса-обертки для хранилища информации о мероприятиях
 
@@ -6,30 +6,70 @@
 
 Структура сервиса:
 
-| Файл                       | Описание                                                         |
-| -------------------------- | ---------------------------------------------------------------- |
-| `event_das.py`             | Код микросервиса                                                 |
-| `config.yml`               | Кофигурационный файл со строкой подключения к RabbitMQ и MongoDB |
-| `run.sh`                   | Файд для запуска краулера из Docker контейнера                   |
-| `requirements.txt`         | Верхнеуровневые зависимости                                      |
-| `requirements.lock`        | Все зависимости (`pip freeze`)                                   |
-| `Dockerfile`               | Описание сборки контейнера сервиса                               |
-| `docker-compose.yml`       | Изолированная развертка сервиса вместе с (RabbitMQ, MongoDB)     |
-| `docker-compose.local.yml` | Развертка заивисимостей для дебаггинга (RabbitMQ, MongoDB)       |
-| `.rest`                    | Тесты взаимодействия с HTTP эндпоинтами микросервиса             |
-| `README.md`                | Описание микросервиса                                            |
+| Файл                       | Описание                                                          |
+| -------------------------- | ----------------------------------------------------------------- |
+| `event_das.py`             | Код микросервиса                                                  |
+| `config.yml`               | Конфигурационный файл со строкой подключения к RabbitMQ и MongoDB |
+| `run.sh`                   | Файл для запуска сервиса из Docker контейнера                     |
+| `requirements.txt`         | Верхнеуровневые зависимости                                       |
+| `requirements.lock`        | Все зависимости (`pip freeze`)                                    |
+| `Dockerfile`               | Описание сборки контейнера сервиса                                |
+| `docker-compose.yml`       | Изолированная развертка сервиса вместе с (RabbitMQ, MongoDB)      |
+| `docker-compose.local.yml` | Развертка зависимостей для дебаггинга (RabbitMQ, MongoDB)         |
+| `README.md`                | Описание микросервиса                                             |
 
 ## API
 
 ### RPC
 
-```
-rpc.event_das.save_events(events)
+Сохранить мероприятия:
+
+```bat
+n.rpc.event_das.save_events(events)
+
+Args: list of events
+Returns: nothing
 ```
 
-Для меж сервисного взаимодействия
+Получить мероприятие по его ид:
+
+```bat
+n.rpc.event_das.get_event_by_id(event_id)
+
+Args: event_id
+Return: event as dictionary object
+```
+
+Получить мероприятия, отсортированные по дате:
+
+```bat
+n.rpc.event_das.get_events_by_date()
+
+Args: nothing
+Returns: list of actual events sorted by date
+```
+
+Получить тэги мероприятия по его ид:
+
+```bat
+n.rpc.event_das.get_tags_by_id(event_id)
+
+Args: event_id
+Returns: list of all tags related to the event
+```
+
+Получить список ид всех мероприятий с их тэгами в виде словаря:
+
+```bat
+n.rpc.event_das.get_event_tags()
+
+Args: nothing
+Returns: events like {'event_1_id': ['tag_1',...,'tag_n'], ..., 'event_m_id':['tag_1',...,'tag_k']}
+```
 
 ### HTTP
+
+Сохранить мероприятия:
 
 ```rst
 POST http://localhost:8000/events HTTP/1.1
@@ -42,17 +82,33 @@ Content-Type: application/json
     "isPaid": true,
     "isOnline": true,
     "location": "Москва, Россия",
-    "startDate": "13/10/2020",
-    "endDate": "14/10/2020",
+    "startDate": "13.10.2020",
+    "endDate": "14.10.2020",
     "description": "...",
     "meta": {
       "it_events_crawler": "18960"
     }
-  }
+  }, ..., {}
 ]
 ```
 
-Для прямого взаимодействия по HTTP, ручного тестирования
+Получить мероприятия, отсортированные по дате:
+
+```rst
+GET http://localhost:8000/allevents HTTP/1.1
+```
+
+Получить тэги мероприятия по его ид:
+
+```rst
+GET http://localhost:8000/events/<string:id>/tags HTTP/1.1
+```
+
+Получить список ид всех мероприятий с их тэгами в виде словаря:
+
+```rst
+GET http://localhost:8000/tags HTTP/1.1
+```
 
 ## Развертывание и запуск
 
@@ -70,19 +126,13 @@ docker-compose --file docker-compose.local.yml up -d
 nameko run event_das
 ```
 
-После чего можно проверить работоспособность сервиса через `.rest` файл (с расширением для VSCode/PyCharm), через Postman. Проверка таким образом производится по `http`.
-
 Для проверки `rpc` запустите в командной строке:
 
 ```bat
 nameko shell
 ```
 
-После чего откроется интерактивная Python среда и обратитесь к сервису следующей командой:
-
-```bat
-n.rpc.event_das.save_events(<events>)
-```
+После чего откроется интерактивная Python среда. Обратитесь к сервису одной из команд, представленных выше в разделе `rpc`
 
 ### Запуск в контейнере
 
