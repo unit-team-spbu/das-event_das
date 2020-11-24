@@ -16,6 +16,7 @@
 | `Dockerfile`               | Описание сборки контейнера сервиса                                |
 | `docker-compose.yml`       | Изолированная развертка сервиса вместе с (RabbitMQ, MongoDB)      |
 | `docker-compose.local.yml` | Развертка зависимостей для дебаггинга (RabbitMQ, MongoDB)         |
+| `.rest`                    | Тесты взаимодействия с HTTP эндпоинтами микросервиса              |
 | `README.md`                | Описание микросервиса                                             |
 
 ## API
